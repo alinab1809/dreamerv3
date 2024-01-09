@@ -27,6 +27,7 @@ defaults:
     steps: 1e10
     expl_until: 0
     log_every: 300
+    report_every: 300
     save_every: 900
     eval_every: 1e6
     eval_initial: True
