@@ -29,11 +29,11 @@ def parallel():
 def tensorstats(tensor, prefix=None):
   metrics = {
       'mean': tensor.mean(),
-      'std': tensor.std(),
-      'mag': jnp.abs(tensor).max(),
-      'min': tensor.min(),
-      'max': tensor.max(),
-      'dist': subsample(tensor),
+      # 'std': tensor.std(),
+      # 'mag': jnp.abs(tensor).max(),
+      # 'min': tensor.min(),
+      # 'max': tensor.max(),
+      # 'dist': subsample(tensor),
   }
   if prefix:
     metrics = {f'{prefix}_{k}': v for k, v in metrics.items()}

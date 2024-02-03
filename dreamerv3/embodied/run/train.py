@@ -12,6 +12,8 @@ def train(agent, env, replay, logger, args):
   should_expl = embodied.when.Until(args.expl_until)
   should_train = embodied.when.Ratio(args.train_ratio / args.batch_steps)
   should_log = embodied.when.Clock(args.log_every)
+  should_report = embodied.when.Clock(args.report_every)
+  should_stats = embodied.when.Clock(args.stats_every)
   should_save = embodied.when.Clock(args.save_every)
   should_sync = embodied.when.Every(args.sync_every)
   step = logger.step
@@ -37,6 +39,7 @@ def train(agent, env, replay, logger, args):
         'sum_abs_reward': sum_abs_reward,
         'reward_rate': (np.abs(ep['reward']) >= 0.5).mean(),
     }, prefix='episode')
+    logger.add({'n_steps': step.save()})
     print(f'Episode has {length} steps and return {score:.1f}.')
     stats = {}
     for key in args.log_keys_video:
@@ -52,7 +55,8 @@ def train(agent, env, replay, logger, args):
         stats[f'mean_{key}'] = ep[key].mean()
       if re.match(args.log_keys_max, key):
         stats[f'max_{key}'] = ep[key].max(0).mean()
-    metrics.add(stats, prefix='stats')
+    if should_stats:
+        metrics.add(stats, prefix='stats')
 
   driver = embodied.Driver(env)
   driver.on_episode(lambda ep, worker: per_episode(ep))
@@ -82,10 +86,11 @@ def train(agent, env, replay, logger, args):
       agent.sync()
     if should_log(step):
       agg = metrics.result()
-      report = agent.report(batch[0])
-      report = {k: v for k, v in report.items() if 'train/' + k not in agg}
+      if should_report(step):
+        report = agent.report(batch[0])
+        report = {k: v for k, v in report.items() if 'train/' + k not in agg}
+        logger.add(report, prefix='report')
       logger.add(agg)
-      logger.add(report, prefix='report')
       logger.add(replay.stats, prefix='replay')
       logger.add(timer.stats(), prefix='timer')
       logger.write(fps=True)

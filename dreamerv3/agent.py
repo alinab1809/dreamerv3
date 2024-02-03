@@ -307,7 +307,13 @@ class ImagActorCritic(nj.Module):
     rand = rand.mean(range(2, len(rand.shape)))
     act = traj['action']
     act = jnp.argmax(act, -1) if self.act_space.discrete else act
+    abs_act = abs(traj['action'])
+    z_act = traj['action'][:, :, -1]
+    # print('action trajectory shape ', traj['action'].shape)
+    # print(traj['action'])
     metrics.update(jaxutils.tensorstats(act, 'action'))
+    metrics.update(jaxutils.tensorstats(abs_act, 'absolute_action'))
+    metrics.update(jaxutils.tensorstats(z_act, 'z_action'))
     metrics.update(jaxutils.tensorstats(rand, 'policy_randomness'))
     metrics.update(jaxutils.tensorstats(ent, 'policy_entropy'))
     metrics.update(jaxutils.tensorstats(logpi, 'policy_logprob'))

@@ -1,6 +1,7 @@
 import time
 from collections import defaultdict, deque
 from functools import partial as bind
+import os
 
 import embodied
 import numpy as np
@@ -29,6 +30,7 @@ class Generic:
       self.online_stride = length
       self.online_counters = defaultdict(int)
     self.saver = directory and saver.Saver(directory, chunks)
+    self.directory = directory
     self.metrics = {
         'samples': 0,
         'sample_wait_dur': 0,
@@ -87,6 +89,13 @@ class Generic:
     self.table[key] = seq
     self.remover[key] = seq
     self.sampler[key] = seq
+
+    chunks = sorted(os.listdir(self.directory))
+    if len(chunks) > 1500:
+        discarded = len(chunks) - 1500
+        for c in chunks[:discarded]:
+            os.remove(self.directory / c)
+
     while self.capacity and len(self) > self.capacity:
       self._remove(self.remover())
 
