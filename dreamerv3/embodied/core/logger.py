@@ -5,7 +5,6 @@ import json
 import os
 import re
 import time
-
 import numpy as np
 
 from . import path
@@ -237,7 +236,7 @@ class WandBOutput:
         # sync_tensorboard=True,,
         entity='ip-dreamteam',
         config=dict(config),
-        dir='/tmp'
+        dir='/tmp/dreamteam'
     )
     self._wandb = wandb
 
