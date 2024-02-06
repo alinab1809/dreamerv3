@@ -10,7 +10,8 @@ def train(agent, env, replay, logger, args):
   logdir.mkdirs()
   print('Logdir', logdir)
   should_expl = embodied.when.Until(args.expl_until)
-  should_train = embodied.when.Ratio(args.train_ratio / args.batch_steps)
+  # should_train = embodied.when.Ratio(args.train_ratio / args.batch_steps)
+  should_train = embodied.when.Sinnvoll(8, args.train_ratio)
   should_log = embodied.when.Clock(args.log_every)
   should_report = embodied.when.Clock(args.report_every)
   should_stats = embodied.when.Clock(args.stats_every)
@@ -42,20 +43,20 @@ def train(agent, env, replay, logger, args):
     logger.add({'n_steps': step.save()})
     print(f'Episode has {length} steps and return {score:.1f}.')
     stats = {}
-    for key in args.log_keys_video:
-      if key in ep:
-        stats[f'policy_{key}'] = ep[key]
-    for key, value in ep.items():
-      if not args.log_zeros and key not in nonzeros and (value == 0).all():
-        continue
-      nonzeros.add(key)
-      if re.match(args.log_keys_sum, key):
-        stats[f'sum_{key}'] = ep[key].sum()
-      if re.match(args.log_keys_mean, key):
-        stats[f'mean_{key}'] = ep[key].mean()
-      if re.match(args.log_keys_max, key):
-        stats[f'max_{key}'] = ep[key].max(0).mean()
-    if should_stats:
+    if should_stats(step):
+        for key in args.log_keys_video:
+            if key in ep:
+                stats[f'policy_{key}'] = ep[key]
+        for key, value in ep.items():
+            if not args.log_zeros and key not in nonzeros and (value == 0).all():
+                continue
+            nonzeros.add(key)
+            if re.match(args.log_keys_sum, key):
+                stats[f'sum_{key}'] = ep[key].sum()
+            if re.match(args.log_keys_mean, key):
+                stats[f'mean_{key}'] = ep[key].mean()
+            if re.match(args.log_keys_max, key):
+                stats[f'max_{key}'] = ep[key].max(0).mean()
         metrics.add(stats, prefix='stats')
 
   driver = embodied.Driver(env)
@@ -74,6 +75,7 @@ def train(agent, env, replay, logger, args):
   state = [None]  # To be writable from train step function below.
   batch = [None]
   def train_step(tran, worker):
+    # print('STEP ', step)
     for _ in range(should_train(step)):
       with timer.scope('dataset'):
         batch[0] = next(dataset)

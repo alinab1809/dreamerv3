@@ -27,6 +27,7 @@ class Ratio:
 
   def __init__(self, ratio):
     assert ratio >= 0, ratio
+    print('ratio ', ratio)
     self._ratio = ratio
     self._prev = None
 
@@ -38,8 +39,34 @@ class Ratio:
       self._prev = step
       return 1
     repeats = int((step - self._prev) * self._ratio)
+    print('reps ', repeats)
     self._prev += repeats / self._ratio
+    print('new prev ', self._prev)
     return repeats
+
+class Sinnvoll:
+
+  def __init__(self, batch_size, ratio):
+    assert ratio >= 0, ratio
+    # idea: initially batch_size 8, then 1 gradient step -- now bigger batches (train less often), still keep ratio
+    self._batch_size = batch_size
+    self._gradient_steps = int(batch_size / ratio)
+    print(f'Doing {self._gradient_steps} gradient steps every {self._batch_size} environment steps')
+    self._prev = None
+
+  def __call__(self, step):
+    step = int(step)
+    # print("STEP ", step, "prev ", self._prev)
+    if self._prev is None:
+        print('setting previous to ', step)
+        self._prev = step
+        return 1
+    if step - self._prev == self._batch_size:
+        # print('time for training... step ', step)
+        self._prev = step
+        return self._gradient_steps
+    return 0
+
 
 
 class Once:
