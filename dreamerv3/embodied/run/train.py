@@ -11,7 +11,7 @@ def train(agent, env, replay, logger, args):
   print('Logdir', logdir)
   should_expl = embodied.when.Until(args.expl_until)
   # should_train = embodied.when.Ratio(args.train_ratio / args.batch_steps)
-  should_train = embodied.when.Sinnvoll(8, args.train_ratio)
+  should_train = embodied.when.Sinnvoll(args.batch_size, args.train_ratio)
   should_log = embodied.when.Clock(args.log_every)
   should_report = embodied.when.Clock(args.report_every)
   should_stats = embodied.when.Clock(args.stats_every)
@@ -66,7 +66,8 @@ def train(agent, env, replay, logger, args):
 
   print('Prefill train dataset.')
   random_agent = embodied.RandomAgent(env.act_space)
-  while len(replay) < max(args.batch_steps, args.train_fill):
+  batch_steps = args.batch_size * args.batch_length
+  while len(replay) < max(batch_steps, args.train_fill):
     driver(random_agent.policy, steps=100)
   logger.add(metrics.result())
   logger.write()
