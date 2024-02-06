@@ -50,21 +50,20 @@ class Sinnvoll:
     assert ratio >= 0, ratio
     # idea: initially batch_size 8, then 1 gradient step -- now bigger batches (train less often), still keep ratio
     self._batch_size = batch_size
-    self._gradient_steps = int(batch_size / ratio)
-    print(f'Doing {self._gradient_steps} gradient steps every {self._batch_size} environment steps')
+    self._training_steps = int(batch_size / ratio)
+    print(f'Doing {self._training_steps} training steps every {self._batch_size} environment steps')
     self._prev = None
 
   def __call__(self, step):
     step = int(step)
     # print("STEP ", step, "prev ", self._prev)
     if self._prev is None:
-        print('setting previous to ', step)
+        # we need 1 training step in the beginning for an initial report
         self._prev = step
         return 1
-    if step - self._prev == self._batch_size:
-        # print('time for training... step ', step)
+    elif step - self._prev == self._batch_size:
         self._prev = step
-        return self._gradient_steps
+        return self._training_steps
     return 0
 
 
