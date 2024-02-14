@@ -66,7 +66,7 @@ def train(agent, env, replay, logger, args):
 
   print('Prefill train dataset.')
   random_agent = embodied.RandomAgent(env.act_space)
-  batch_steps = args.batch_size * args.batch_length
+  batch_steps = 16 * args.batch_length
   while len(replay) < max(batch_steps, args.train_fill):
     driver(random_agent.policy, steps=100)
   logger.add(metrics.result())
