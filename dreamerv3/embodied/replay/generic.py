@@ -90,12 +90,6 @@ class Generic:
     self.remover[key] = seq
     self.sampler[key] = seq
 
-    chunks = sorted(os.listdir(self.directory))
-    if len(chunks) > 1500:
-        discarded = len(chunks) - 1500
-        for c in chunks[:discarded]:
-            os.remove(self.directory / c)
-
     while self.capacity and len(self) > self.capacity:
       self._remove(self.remover())
 
