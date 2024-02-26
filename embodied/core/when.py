@@ -62,6 +62,7 @@ class Sinnvoll:
         self._prev = step
         return 1
     elif step - self._prev == self._batch_size:
+        print('TRAIN', step)
         self._prev = step
         return self._training_steps
     return 0
