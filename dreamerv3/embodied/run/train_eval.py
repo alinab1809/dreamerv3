@@ -11,7 +11,8 @@ def train_eval(
   logdir.mkdirs()
   print('Logdir', logdir)
   should_expl = embodied.when.Until(args.expl_until)
-  should_train = embodied.when.Ratio(args.train_ratio / args.batch_steps)
+  # should_train = embodied.when.Ratio(args.train_ratio / args.batch_steps)
+  should_train = embodied.when.Ratio(args.train_ratio / (args.batch_size * args.batch_length))
   should_log = embodied.when.Clock(args.log_every)
   should_save = embodied.when.Clock(args.save_every)
   should_eval = embodied.when.Every(args.eval_every, args.eval_initial)
@@ -62,11 +63,12 @@ def train_eval(
   driver_eval.on_episode(lambda ep, worker: per_episode(ep, mode='eval'))
 
   random_agent = embodied.RandomAgent(train_env.act_space)
+  batch_steps = 16 * args.batch_length
   print('Prefill train dataset.')
-  while len(train_replay) < max(args.batch_steps, args.train_fill):
+  while len(train_replay) < max(batch_steps, args.train_fill):
     driver_train(random_agent.policy, steps=100)
   print('Prefill eval dataset.')
-  while len(eval_replay) < max(args.batch_steps, args.eval_fill):
+  while len(eval_replay) < max(batch_steps, args.eval_fill):
     driver_eval(random_agent.policy, steps=100)
   logger.add(metrics.result())
   logger.write()
@@ -96,7 +98,7 @@ def train_eval(
       logger.add(eval_replay.stats, prefix='eval_replay')
       logger.add(timer.stats(), prefix='timer')
       logger.write(fps=True)
-  driver_train.on_step(train_step)
+  driver_train.on_episode(train_step)
 
   checkpoint = embodied.Checkpoint(logdir / 'checkpoint.ckpt')
   checkpoint.step = step
@@ -117,6 +119,7 @@ def train_eval(
       print('Starting evaluation at step', int(step))
       driver_eval.reset()
       driver_eval(policy_eval, episodes=max(len(eval_env), args.eval_eps))
+      print('Done with evaluation, step ', int(step))
     driver_train(policy_train, steps=100)
     if should_save(step):
       checkpoint.save()
