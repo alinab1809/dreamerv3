@@ -1,6 +1,8 @@
 import concurrent.futures
 from collections import defaultdict, deque
 from functools import partial as bind
+from dirsync import sync
+import time
 
 import embodied
 
@@ -10,6 +12,8 @@ from . import chunk as chunklib
 class Saver:
 
   def __init__(self, directory, chunks=1024):
+    self.dir = str(directory)[:-7]
+    print(f"saver: dir {self.dir}, local {self.dir[11:]}")
     self.directory = embodied.Path(directory)
     self.directory.mkdirs()
     self.chunks = chunks
@@ -17,6 +21,8 @@ class Saver:
     self.workers = concurrent.futures.ThreadPoolExecutor(16)
     self.promises = deque()
     self.loading = False
+    self.last_sync = time.time()
+    self.last_rm = 0
 
   def add(self, step, worker):
     if self.loading:
@@ -31,12 +37,27 @@ class Saver:
         self.promises.remove(promise)
 
   def save(self, wait=False):
-    for buffer in self.buffers.values():
-      if buffer.length:
-        self.promises.append(self.workers.submit(buffer.save, self.directory))
-    if wait:
-      [x.result() for x in self.promises]
-      self.promises.clear()
+      time_now = time.time()
+      if time_now - self.last_sync >= 10800:
+          print("synching logdir to local")
+          self.last_rm += 1
+          if self.last_rm == 2:
+              self.last_rm = 0
+              chunks = sorted(os.listdir(self.dir + '/replay'))
+              if len(chunks) > 1300:
+                  print('too many chunks, removing unused')
+                  discarded = len(chunks) - 1300
+                  for c in chunks[:discarded]:
+                      os.remove(self.dir + '/replay/' + c)
+          sync(self.dir, self.dir[11:], "sync")
+          self.last_sync = time_now
+
+      for buffer in self.buffers.values():
+        if buffer.length:
+            self.promises.append(self.workers.submit(buffer.save, self.directory))
+        if wait:
+            [x.result() for x in self.promises]
+            self.promises.clear()
 
   def load(self, capacity, length):
     filenames = chunklib.Chunk.scan(self.directory, capacity, length - 1)
