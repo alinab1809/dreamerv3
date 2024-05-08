@@ -41,7 +41,7 @@ class Ratio:
     repeats = int((step - self._prev) * self._ratio)
     print('reps ', repeats)
     self._prev += repeats / self._ratio
-    print('new prev ', self._prev)
+    print('STEP ', step)
     return repeats
 
 class Sinnvoll:
