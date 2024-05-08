@@ -210,6 +210,70 @@ loconav:
   encoder: {mlp_keys: '.*', cnn_keys: 'image'}
   decoder: {mlp_keys: '.*', cnn_keys: 'image'}
 
+
+# 3X-SMALL ###########################
+xxxsmall:
+  rssm.deter: 64
+  .*\.cnn_depth: 8
+  .*\.units: 64
+  .*\.layers: 2
+
+xxxsmall_deter:
+  rssm.deter: 64
+  .*\.cnn_depth: 8
+  .*\.units: 128
+  .*\.layers: 2
+
+xxxsmall_units:
+  rssm.deter: 128
+  .*\.cnn_depth: 8
+  .*\.units: 64
+  .*\.layers: 2
+
+
+# 2X-SMALL ##########################
+xxsmall:
+  rssm.deter: 128
+  .*\.cnn_depth: 8
+  .*\.units: 128
+  .*\.layers: 2
+
+xxsmall_deter:
+  rssm.deter: 128
+  .*\.cnn_depth: 8
+  .*\.units: 256
+  .*\.layers: 2
+
+xxsmall_units:
+  rssm.deter: 256
+  .*\.cnn_depth: 8
+  .*\.units: 128
+  .*\.layers: 2
+
+
+# X-SMALL ##########################
+xsmall:
+  rssm.deter: 256
+  .*\.cnn_depth: 16
+  .*\.units: 256
+  .*\.layers: 2
+
+xsmall_deter:
+  rssm.deter: 256
+  .*\.cnn_depth: 16
+  .*\.units: 512
+  .*\.layers: 2
+
+xsmall_units:
+  rssm.deter: 512
+  .*\.cnn_depth: 16
+  .*\.units: 256
+  .*\.layers: 2
+
+
+
+
+# SMALL #############################
 small:
   rssm.deter: 512
   .*\.cnn_depth: 32
