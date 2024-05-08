@@ -3,6 +3,7 @@ from collections import defaultdict, deque
 from functools import partial as bind
 from dirsync import sync
 import time
+import os
 
 import embodied
 
@@ -37,6 +38,13 @@ class Saver:
         self.promises.remove(promise)
 
   def save(self, wait=False):
+      for buffer in self.buffers.values():
+        if buffer.length:
+            self.promises.append(self.workers.submit(buffer.save, self.directory))
+        if wait:
+            [x.result() for x in self.promises]
+            self.promises.clear()
+
       time_now = time.time()
       if time_now - self.last_sync >= 10800:
           print("synching logdir to local")
@@ -52,12 +60,6 @@ class Saver:
           sync(self.dir, self.dir[11:], "sync")
           self.last_sync = time_now
 
-      for buffer in self.buffers.values():
-        if buffer.length:
-            self.promises.append(self.workers.submit(buffer.save, self.directory))
-        if wait:
-            [x.result() for x in self.promises]
-            self.promises.clear()
 
   def load(self, capacity, length):
     filenames = chunklib.Chunk.scan(self.directory, capacity, length - 1)
