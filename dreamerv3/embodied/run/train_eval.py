@@ -14,6 +14,8 @@ def train_eval(
   # should_train = embodied.when.Ratio(args.train_ratio / args.batch_steps)
   should_train = embodied.when.Ratio(args.train_ratio / (args.batch_size * args.batch_length))
   should_log = embodied.when.Clock(args.log_every)
+  should_report = embodied.when.Clock(args.report_every)
+  should_stats = embodied.when.Clock(args.stats_every)
   should_save = embodied.when.Clock(args.save_every)
   should_eval = embodied.when.Every(args.eval_every, args.eval_initial)
   should_sync = embodied.when.Every(args.sync_every)
@@ -39,20 +41,21 @@ def train_eval(
     }, prefix=('episode' if mode == 'train' else f'{mode}_episode'))
     print(f'Episode has {length} steps and return {score:.1f}.')
     stats = {}
-    for key in args.log_keys_video:
-      if key in ep:
-        stats[f'policy_{key}'] = ep[key]
-    for key, value in ep.items():
-      if not args.log_zeros and key not in nonzeros and (value == 0).all():
-        continue
-      nonzeros.add(key)
-      if re.match(args.log_keys_sum, key):
-        stats[f'sum_{key}'] = ep[key].sum()
-      if re.match(args.log_keys_mean, key):
-        stats[f'mean_{key}'] = ep[key].mean()
-      if re.match(args.log_keys_max, key):
-        stats[f'max_{key}'] = ep[key].max(0).mean()
-    metrics.add(stats, prefix=f'{mode}_stats')
+    if should_stats(step):
+      for key in args.log_keys_video:
+        if key in ep:
+          stats[f'policy_{key}'] = ep[key]
+      for key, value in ep.items():
+        if not args.log_zeros and key not in nonzeros and (value == 0).all():
+          continue
+        nonzeros.add(key)
+        if re.match(args.log_keys_sum, key):
+          stats[f'sum_{key}'] = ep[key].sum()
+        if re.match(args.log_keys_mean, key):
+          stats[f'mean_{key}'] = ep[key].mean()
+        if re.match(args.log_keys_max, key):
+          stats[f'max_{key}'] = ep[key].max(0).mean()
+      metrics.add(stats, prefix=f'{mode}_stats')
 
   driver_train = embodied.Driver(train_env)
   driver_train.on_episode(lambda ep, worker: per_episode(ep, mode='train'))
@@ -90,7 +93,8 @@ def train_eval(
       agent.sync()
     if should_log(step):
       logger.add(metrics.result())
-      logger.add(agent.report(batch[0]), prefix='report')
+      if should_report(step):
+        logger.add(agent.report(batch[0]), prefix='report')
       with timer.scope('dataset_eval'):
         eval_batch = next(dataset_eval)
       logger.add(agent.report(eval_batch), prefix='eval')
