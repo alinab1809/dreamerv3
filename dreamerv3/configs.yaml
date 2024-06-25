@@ -47,6 +47,8 @@ defaults:
     log_every: 120
     save_every: 900
     eval_every: 180
+    report_every: 300
+    stats_every: 1200
     eval_initial: True
     eval_eps: 1
     train_ratio: 32.0
