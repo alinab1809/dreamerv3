@@ -29,6 +29,8 @@ def train(make_agent, make_replay, make_env, make_logger, args):
   should_log = embodied.when.Clock(args.log_every)
   should_eval = embodied.when.Clock(args.eval_every)
   should_save = embodied.when.Clock(args.save_every)
+  should_report = embodied.when.Clock(args.report_every)
+  should_stats = embodied.when.Clock(args.stats_every)
 
   @embodied.timer.section('log_step')
   def log_step(tran, worker):
@@ -42,9 +44,10 @@ def train(make_agent, make_replay, make_env, make_logger, args):
       episode.reset()
 
     if worker < args.log_video_streams:
-      for key in args.log_keys_video:
-        if key in tran:
-          episode.add(f'policy_{key}', tran[key], agg='stack')
+      if should_stats(step):
+        for key in args.log_keys_video:
+          if key in tran:
+            episode.add(f'policy_{key}', tran[key], agg='stack')
     for key, value in tran.items():
       if re.match(args.log_keys_sum, key):
         episode.add(key, value, agg='sum')
@@ -108,7 +111,7 @@ def train(make_agent, make_replay, make_env, make_logger, args):
 
     driver(policy, steps=10)
 
-    if should_eval(step) and len(replay):
+    if should_report(step) and len(replay):
       mets, _ = agent.report(next(dataset_report), carry_report)
       logger.add(mets, prefix='report')
 
