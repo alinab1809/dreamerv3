@@ -10,6 +10,9 @@ import numpy as np
 from . import chunk as chunklib
 from . import limiters
 from . import selectors
+import os
+from dirsync import sync
+import time
 
 
 class Replay:
@@ -19,7 +22,10 @@ class Replay:
       samples_per_insert=None, tolerance=1e4, online=False, selector=None,
       save_wait=False, seed=0):
     assert not capacity or min_size <= capacity
-
+    self.dir = str(directory)[:-7]
+    self.last_sync = time.time()
+    self.last_rm = 0
+    print(f"saver: dir {self.dir}, local {self.dir[11:]}")
     self.length = length
     self.capacity = capacity
     self.chunksize = chunksize
@@ -331,6 +337,21 @@ class Replay:
             promises.append(self.workers.submit(chunk.save, self.directory))
         if self.save_wait:
           [promise.result() for promise in promises]
+
+    time_now = time.time()
+    if time_now - self.last_sync >= 10800:
+      print("synching logdir to local")
+      self.last_rm += 1
+      if self.last_rm == 2:
+        self.last_rm = 0
+        chunks = sorted(os.listdir(self.dir + '/replay'))
+        if len(chunks) > 1300:
+          print('too many chunks, removing unused')
+          discarded = len(chunks) - 1300
+          for c in chunks[:discarded]:
+            os.remove(self.dir + '/replay/' + c)
+      sync(self.dir, self.dir[11:], "sync")
+      self.last_sync = time_now
     return {'limiter': self.limiter.save()}
 
   @embodied.timer.section('replay_load')
