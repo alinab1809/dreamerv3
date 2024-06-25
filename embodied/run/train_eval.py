@@ -33,7 +33,9 @@ def train_eval(
   should_train = embodied.when.Ratio(args.train_ratio / batch_steps)
   should_log = embodied.when.Clock(args.log_every)
   should_save = embodied.when.Clock(args.save_every)
-  should_eval = embodied.when.Clock(args.eval_every)
+  should_eval = embodied.when.Every(args.eval_every)
+  should_report = embodied.when.Clock(args.report_every)
+  should_stats = embodied.when.Clock(args.stats_every)
 
   @embodied.timer.section('log_step')
   def log_step(tran, worker, mode):
@@ -49,9 +51,10 @@ def train_eval(
       episode.reset()
 
     if worker < args.log_video_streams:
-      for key in args.log_keys_video:
-        if key in tran:
-          episode.add(f'policy_{key}', tran[key], agg='stack')
+      if should_stats(step):
+        for key in args.log_keys_video:
+          if key in tran:
+            episode.add(f'policy_{key}', tran[key], agg='stack')
     for key, value in tran.items():
       if re.match(args.log_keys_sum, key):
         episode.add(key, value, agg='sum')
@@ -128,13 +131,14 @@ def train_eval(
       eval_driver.reset(agent.init_policy)
       eval_driver(eval_policy, episodes=args.eval_eps)
       logger.add(eval_epstats.result(), prefix='epstats')
-      if len(train_replay):
-        mets, _ = agent.report(next(dataset_report), carry_report)
-        logger.add(mets, prefix='report')
+
       if len(eval_replay):
         mets, _ = agent.report(next(dataset_eval), carry_report)
         logger.add(mets, prefix='eval')
 
+    if should_report(step) and len(train_replay):
+      mets, _ = agent.report(next(dataset_report), carry_report)
+      logger.add(mets, prefix='report')
     train_driver(train_policy, steps=10)
 
     if should_log(step):
