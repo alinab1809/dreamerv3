@@ -19,10 +19,12 @@ def eval_only(make_agent, make_env, make_eval_replay, make_logger, args):
   step = logger.step
   usage = embodied.Usage(**args.usage)
   agg = embodied.Agg()
-  epstats = embodied.Agg()
+  eval_epstats = embodied.Agg()
   episodes = defaultdict(embodied.Agg)
   should_log = embodied.when.Clock(args.log_every)
   policy_fps = embodied.FPS()
+  carry = [agent.init_train(args.batch_size)]
+  carry_report = agent.init_report(args.batch_size)
 
   @embodied.timer.section('log_step')
   def log_step(tran, worker):
@@ -56,7 +58,7 @@ def eval_only(make_agent, make_env, make_eval_replay, make_logger, args):
       rew = result.pop('rewards')
       if len(rew) > 1:
         result['reward_rate'] = (np.abs(rew[1:] - rew[:-1]) >= 0.01).mean()
-      epstats.add(result)
+      eval_epstats.add(result)
 
   fns = [bind(make_env, i) for i in range(args.num_envs)]
   driver = embodied.Driver(fns, args.driver_parallel)
@@ -68,8 +70,8 @@ def eval_only(make_agent, make_env, make_eval_replay, make_logger, args):
   # driver.on_step(bind(log_step, mode='eval'))
   dataset_eval = agent.dataset(
     bind(eval_replay.dataset, args.batch_size, args.batch_length_eval))
-
-  checkpoint = embodied.Checkpoint()
+  logdir = embodied.Path(args.logdir)
+  checkpoint = embodied.Checkpoint(logdir / 'checkpoint.ckpt')
   checkpoint.agent = agent
   checkpoint.eval_replay = eval_replay
   checkpoint.load(args.from_checkpoint, keys=['agent'])
