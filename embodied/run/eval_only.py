@@ -6,10 +6,11 @@ import embodied
 import numpy as np
 
 
-def eval_only(make_agent, make_env, make_logger, args):
+def eval_only(make_agent, make_env, make_eval_replay, make_logger, args):
   assert args.from_checkpoint
 
   agent = make_agent()
+  eval_replay = make_eval_replay()
   logger = make_logger()
 
   logdir = embodied.Path(args.logdir)
@@ -59,25 +60,39 @@ def eval_only(make_agent, make_env, make_logger, args):
 
   fns = [bind(make_env, i) for i in range(args.num_envs)]
   driver = embodied.Driver(fns, args.driver_parallel)
-  driver.on_step(lambda tran, _: step.increment())
+  # driver.on_step(lambda tran, _: step.increment())
   driver.on_step(lambda tran, _: policy_fps.step())
   driver.on_step(log_step)
 
+  driver.on_step(eval_replay.add)
+  # driver.on_step(bind(log_step, mode='eval'))
+  dataset_eval = agent.dataset(
+    bind(eval_replay.dataset, args.batch_size, args.batch_length_eval))
+
   checkpoint = embodied.Checkpoint()
   checkpoint.agent = agent
+  checkpoint.eval_replay = eval_replay
   checkpoint.load(args.from_checkpoint, keys=['agent'])
 
   print('Start evaluation')
   policy = lambda *args: agent.policy(*args, mode='eval')
   driver.reset(agent.init_policy)
-  while step < args.steps:
-    driver(policy, steps=10)
-    if should_log(step):
-      logger.add(agg.result())
-      logger.add(epstats.result(), prefix='epstats')
-      logger.add(embodied.timer.stats(), prefix='timer')
-      logger.add(usage.stats(), prefix='usage')
-      logger.add({'fps/policy': policy_fps.result()})
-      logger.write()
+  # while step < args.steps:
+  #   driver(policy, steps=10)
+  #   if should_log(step):
+  #     logger.add(agg.result())
+  #     logger.add(epstats.result(), prefix='epstats')
+  #     logger.add(embodied.timer.stats(), prefix='timer')
+  #     logger.add(usage.stats(), prefix='usage') # TODO: what is this?
+  #     logger.add({'fps/policy': policy_fps.result()})
+  #     logger.write()
 
-  logger.close()
+  driver(policy, episodes=args.eval_eps)
+  logger.add(eval_epstats.result(), prefix='epstats')
+
+  if len(eval_replay):
+    mets, _ = agent.report(next(dataset_eval), carry_report)
+    logger.add(mets, prefix='eval')
+  logger.write()
+  checkpoint.save('eval')
+  #  logger.close()  # TODO: do we need this to log during training again?
