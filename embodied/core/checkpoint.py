@@ -1,6 +1,7 @@
 import concurrent.futures
 import pickle
 import time
+import os
 
 from . import path
 from . import printing
@@ -49,7 +50,17 @@ class Checkpoint:
 
   def save(self, filename=None, keys=None):
     assert self._filename or filename
-    filename = path.Path(filename or self._filename)
+
+    if filename == 'eval':
+      idx = len('/checkpoint.ckpt')
+      save_to = self._filename[:-idx] + '/eval/'
+      if not os.exists(save_to):
+        os.mkdir(save_to)
+      how_many = os.listdir(save_to)
+      filename = save_to + str(len(how_many) + 1) + '.ckpt'
+
+    else:
+      filename = path.Path(filename or self._filename)
     printing.print_(f'Writing checkpoint: {filename}')
     if self._parallel:
       self._promise and self._promise.result()
