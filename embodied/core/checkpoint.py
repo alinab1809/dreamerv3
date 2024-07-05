@@ -53,7 +53,7 @@ class Checkpoint:
 
     if filename == 'eval':
       idx = len('/checkpoint.ckpt')
-      save_to = self._filename[:-idx] + '/eval/'
+      save_to = str(self._filename)[:-idx] + '/eval/'
       if not os.exists(save_to):
         os.mkdir(save_to)
       how_many = os.listdir(save_to)
