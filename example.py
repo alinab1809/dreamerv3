@@ -1,19 +1,21 @@
 import warnings
 from functools import partial as bind
-
+import sys
+sys.path.insert(0, '/home/dreamteam/code/dreamteam/lib/dreamerv3')
 import dreamerv3
 import embodied
-
+import wandb
 warnings.filterwarnings('ignore', '.*truncated to dtype int32.*')
 
 
 def main():
-
+  wandb.login(key='f088470fd2642d277998875fb79e1a8b1dddf61b')
   config = embodied.Config(dreamerv3.Agent.configs['defaults'])
   config = config.update({
       **dreamerv3.Agent.configs['size100m'],
       'logdir': f'~/logdir/{embodied.timestamp()}-example',
       'run.train_ratio': 32,
+      'run.steps': 1000
   })
   config = embodied.Flags(config).parse()
 
@@ -33,7 +35,7 @@ def main():
     return embodied.Logger(embodied.Counter(), [
         embodied.logger.TerminalOutput(config.filter),
         embodied.logger.JSONLOutput(logdir, 'metrics.jsonl'),
-        embodied.logger.TensorBoardOutput(logdir),
+        # embodied.logger.TensorBoardOutput(logdir),
         # embodied.logger.WandbOutput(logdir.name, config=config),
     ])
 
@@ -43,6 +45,13 @@ def main():
         capacity=config.replay.size,
         directory=embodied.Path(config.logdir) / 'replay',
         online=config.replay.online)
+
+  def make_eval_replay(config):
+      return embodied.replay.Replay(
+          length=config.batch_length,
+          capacity=config.replay.size,
+          directory=embodied.Path(config.logdir) / 'eval/replay',
+          online=config.replay.online)
 
   def make_env(config, env_id=0):
     import crafter
@@ -66,6 +75,15 @@ def main():
       bind(make_replay, config),
       bind(make_env, config),
       bind(make_logger, config), args)
+
+  print("\nStart evaluation...")
+  args = args.update(from_checkpoint=f'{config.logdir}/checkpoint.ckpt')
+  embodied.run.eval_only(
+      bind(make_agent, config),
+      bind(make_env, config),
+      bind(make_eval_replay, config),
+      bind(make_logger, config),
+      args)
 
 
 if __name__ == '__main__':
